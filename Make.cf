@@ -1,0 +1,48 @@
+#
+# Compiler Option
+#
+
+DAP_HOME	= $(HOME)/workspace_dap
+SERVER_KIND = -D_DAP_
+CCOPTIONS   = $(SERVER_KIND)
+
+COMLIBDIR	= $(DAP_HOME)/lib
+COMINCDIR	= $(DAP_HOME)/inc
+
+# Open Source Library
+#DBPOOL_INC  = -I$(COMINCDIR)/dbpool
+#DBPOOL_LIB  = -L$(COMLIBDIR)/dbpool -lzdb
+JSON_INC    = -I$(COMINCDIR)/json
+JSON_LIB    = -L$(COMLIBDIR)/json -ljansson
+
+# Golbal Library
+MYSQL_INC   = -I/usr/include/mysql
+MYSQL_LIB   = -L/usr/bin/mysql -lmysqlclient 
+
+# Server Library
+INCDIR		= -I/usr/include\
+			  -I$(COMINCDIR)\
+			  -I$(COMINCDIR)/com\
+			  -I$(COMINCDIR)/secure\
+			  -I$(COMINCDIR)/gpipe\
+			  -I$(COMINCDIR)/json\
+			  -I$(COMINCDIR)/linuxke\
+			  -I$(COMINCDIR)/mysqldb\
+			  -I$(COMINCDIR)/inotify\
+			  -I.
+
+LIBDIR 		= -L/usr/lib64\
+			  -L$(COMLIBDIR)\
+			  -L$(COMLIBDIR)/crypto\
+			  -L$(COMLIBDIR)/json\
+			  -L.
+
+BINDIR		= $(COMINCDIR)/bin
+
+RM			= /bin/rm -f
+CP			= /bin/cp
+TOUCH		= /bin/touch
+
+#CC			= cc
+CC			= gcc -g
+

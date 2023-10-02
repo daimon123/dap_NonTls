@@ -1,0 +1,17 @@
+TRUNCATE TABLE SYS_OMC_ERROR_TB;
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'1008','Process_Exec_Error','CRITICAL','Process execute failure');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'1018','DB_Demon_Error','CRITICAL','DB daemon is killed');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'1030','Process_Killed_Error','CRITICAL','Registered process is killed');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2001','System_Memory_Few1','CRITICAL','The value of System Memory is within Critical value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2011','System_Memory_Few2','MAJOR','The value of System Memory is within Major value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2021','System_Memory_Few3','MINOR','The value of System Memory is within Minor value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2002','System_CPU_Few1','CRITICAL','The value of CPU Idle is within Critical value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2012','System_CPU_Few2','MAJOR','The value of CPU Idle is within Major value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2022','System_CPU_Few3','MINOR','The value of CPU Idle is within Minor value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2003','System_Disk_Few1','CRITICAL','The rate of system disk used is within Critical value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2013','System_Disk_Few2','MAJOR','The rate of system disk used is within Major value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2023','System_Disk_Few3','MINOR','The rate of system disk used is within Minor value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2004','System_Queue_Few1','CRITICAL','The value of system queue used is within Critical value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2014','System_Queue_Few2','MAJOR','The value of system queue used is within Major value');
+INSERT INTO SYS_OMC_ERROR_TB (MGWID,CODE,ERRORID,ERRORLEVEL,CONTENT) VALUES (1,'2024','System_Queue_Few3','MINOR','The value of system queue used is within Minor value');
+COMMIT;

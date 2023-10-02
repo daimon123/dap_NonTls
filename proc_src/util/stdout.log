@@ -1,0 +1,5 @@
+connect trying host(10.20.20.43) port(50309) 
+sec : [0] , usec : [30000] 
+140432964057072:error:02001002:system library:fopen:No such file or directory:bss_file.c:402:fopen('/home/intent/dap/bin/util/certs/dap_util.pem','r')
+140432964057072:error:20074002:BIO routines:FILE_CTRL:system lib:bss_file.c:404:
+140432964057072:error:140AD002:SSL routines:SSL_CTX_use_certificate_file:system lib:ssl_rsa.c:468:

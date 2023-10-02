@@ -1,0 +1,37 @@
+//
+// Created by KimByoungGook on 2020-10-30.
+//
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <syslog.h>
+
+#include "db/dap_mysql.h"
+#include "db/dap_defield.h"
+#include "db/dap_trandb.h"
+#include "db/dap_checkdb.h"
+
+#include "com/dap_def.h"
+#include "com/dap_com.h"
+#include "com/dap_req.h"
+#include "dbif.h"
+
+
+/* INSERT EVENT_TB */
+int	fdbif_MergeEventTb(_DAP_EventParam *p_EP, int p_stLen)
+{
+    int					rxt = 0;
+    int					retryCnt = 0;
+    int					rowCnt = 0;
+    unsigned long long	hbSq = 0;
+    unsigned long long	evSq = 0;
+    char				sqlBuf[2048] = {0x00,};
+    char				histTableName[50] = {0x00,};
+    char				cmdSyslog[256] = {0x00,};
+    char				sqlContext[512] = {0x00,};
+
+    /*
+     * 0:pass 1:drop 2:info 3:warning 4:critical 5:block
+     * ev_level = 0,1,2

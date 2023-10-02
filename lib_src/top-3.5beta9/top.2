@@ -1,0 +1,205 @@
+
+#include "os.h"
+#include <signal.h>
+#include <setjmp.h>
+#include <ctype.h>
+#include <sys/time.h>
+
+/* includes specific to top */
+#include "top.h"
+#include "top.local.h"
+#include "boolean.h"
+#include "machine.h"
+#include "utils.h"
+
+/* Size of the stdio buffer given to stdout */
+#define Buffersize	2048
+
+/* The buffer that stdio will use */
+char stdoutbuf[Buffersize];
+
+/* internal routines */
+void quit();
+
+char *username();
+char *ctime();
+char *kill_procs();
+
+#ifdef ORDER
+extern int (*proc_compares[])();
+#else
+extern int proc_compare();
+#endif
+time_t time();
+
+caddr_t get_process_info();
+
+char *username();
+char *itoa7();
+
+main(argc, argv)
+
+int  argc;
+char *argv[];
+
+{
+    register int i;
+    register int active_procs;
+    register int change;
+
+    struct system_info system_info;
+    struct statics statics;
+    caddr_t processes;
+
+    int delay = Default_DELAY;
+    time_t curr_time;
+    char *(*get_userid)() = username;
+    char *uname_field = "USERNAME";
+    char *header_text;
+    char *env_top;
+    char **preset_argv;
+    int  preset_argc = 0;
+    char **av;
+    int  ac;
+    char dostates = No;
+    char do_unames = Yes;
+    char interactive = Maybe;
+    char warnings = 0;
+#if Default_TOPN == Infinity
+#endif
+    char ch;
+    char *iptr;
+    char no_command = 1;
+    struct timeval timeout;
+    struct process_select ps;
+#ifdef ORDER
+    char *order_name = NULL;
+    int order_index = 0;
+#endif
+
+
+    /* set the buffer for stdout */
+/*
+    setbuffer(stdout, stdoutbuf, Buffersize);
+*/
+
+    /* initialize some selection options */
+    ps.idle    = Yes;
+    ps.system  = No;
+    ps.uid     = getuid();
+    ps.command = NULL;
+
+	/* kim */
+	delay	=	10;
+
+	/* tricky:  remember old value of preset_argc & set preset_argc = 0 */
+	i = preset_argc;
+	preset_argc = 0;
+
+    /* set constants for username/uid display correctly */
+    if (!do_unames)
+    {
+	uname_field = "   UID  ";
+	get_userid = itoa7;
+    }
+
+    /* initialize the kernel memory interface */
+    if (machine_init(&statics) == -1)
+    {
+		perror("mainchin init");
+	exit(1);
+    }
+
+#ifdef no_initialization_needed
+    /* initialize the hashing stuff */
+    if (do_unames)
+    {
+	init_hash();
+    }
+#endif
+
+
+	i = 0;
+    while (1)
+    {
+
+	printf(" %x \n", time(0) );
+	/* get the current stats */
+	get_system_info(&system_info);
+
+	/* get the current set of processes */
+	processes =
+		get_process_info(&system_info,
+				 &ps,
+#ifdef ORDER
+				 proc_compares[order_index]);
+#else
+				 proc_compare);
+#endif
+
+	
+
+	p_memory(system_info.memory);
+
+	if(i > 0)
+	p_cpustaus(system_info.cpustates);
+	else
+		i = 1;
+
+	sleep(5);
+
+    }
+
+    quit(0);
+    /*NOTREACHED*/
+}
+
+void quit(status)		/* exit under duress */
+int status;
+
+{
+    exit(status);
+;
+    /*NOTREACHED*/
+}
+
+
+p_memory(stats)
+int *stats;
+{
+
+	printf(" MEMORY REAL = [%05s] FREE =[%05s] SWIN = [%05s] SWFE = [%05s]\n", 
+	format_k(stats[0]),
+	format_k(stats[2]),
+	format_k(stats[3]),
+	format_k(stats[4]) );
+}
+
+p_cpustaus(states)
+register int *states;
+{
+	printf("CPU IDLE =[%4.1f] USER = [[%4.1f] KER = [%4.1f] iowait = [%4.1f] \n",
+
+	((float)states[0])/10.,
+	((float)states[1])/10.,
+	((float)states[2])/10.,
+	((float)states[3])/10.,
+	((float)states[4])/10. );
+
+	printf("%d %d %d %d \n", states[0], states[1],states[2],states[3],states[4]);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

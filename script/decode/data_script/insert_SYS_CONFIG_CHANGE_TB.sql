@@ -1,0 +1,13 @@
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'master','/home/intent/dap/config/proc_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'sysman','/home/intent/dap/config/file_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'sysman','/home/intent/dap/config/threshold_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/config_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/rule_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/rule_schedule_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/rule_detect_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/agent_upgrade_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/cp_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/base_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'pcif','/home/intent/dap/config/event_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES ({SERVER_ID},0,'alarm','/home/intent/dap/config/alarm_change');
+INSERT INTO SYS_CONFIG_CHANGE_TB(MGWID,CHGFLAG,PROCESS,NAME) VALUES (1, 0,'report','/home/intent/dap/config/report_change');
