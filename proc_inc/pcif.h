@@ -73,9 +73,9 @@
 #define         MAX_UPGRADE_COUNT      100
 #define         MAX_GW_COUNT        20000
 #define			MAX_MANAGER_COUNT	100
-#define			MAX_USER_COUNT		20000
-#define			MAX_GROUP_COUNT		10000
-#define			MAX_BASE_COUNT		20000
+#define			MAX_USER_COUNT		30000
+#define			MAX_GROUP_COUNT		20000
+#define			MAX_BASE_COUNT		30000
 #define         MAX_CONFIG_COUNT    100
 
 #define			MAX_THREAD	255

@@ -239,6 +239,7 @@ void fjson_ParseJsonSsoCertFt(
         json_t* 		value,
         _DAP_DETECT_DATA* 	DtDa,
         char*			cpip);
+void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DAP_DETECT_DATA * DtDa, char*	cpip);
 
 void fjson_ParseJsonWinDrvFt(
         const char* 	key,
@@ -246,7 +247,6 @@ void fjson_ParseJsonWinDrvFt(
         json_t* 		value,
         _DAP_DETECT_DATA* 	DtDa,
         char*			cpip);
-void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DAP_DETECT_DATA * DtDa);
 void fjson_ParseJsonRdpSessionFt(
         const char* 	key,
         int*			itemIdx,

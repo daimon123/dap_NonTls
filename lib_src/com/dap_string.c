@@ -294,6 +294,26 @@ void fcom_SubStr(int start, int len, char *orgstr, char *substr)
     }
 }
 
+int fcom_SafeAtoi(const char *str, int *result) {
+    char *endptr;
+    long value = strtol(str, &endptr, 10); // 문자열을 long으로 변환
+
+    // strtol 함수는 변환된 값과 변환을 마친 문자의 포인터(endptr)를 반환
+    if (*endptr != '\0') {
+        // 변환 중에 끝에 도달하지 않았으면, 숫자 이외의 문자가 있음을 의미
+        return 0; // 에러: 정수가 아닌 입력
+    }
+
+    if (value < INT_MIN || value > INT_MAX) {
+        // 정수 오버플로우 또는 언더플로우가 발생한 경우
+        return 0; // 에러: 정수 범위를 벗어난 입력
+    }
+
+    *result = (int)value;
+    return 1; // 변환 성공
+}
+
+
 
 int fcom_GetStringPos(char *s, char c)
 {

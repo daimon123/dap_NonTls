@@ -65,14 +65,14 @@ static const short base64_reverse_table[256] = {
 };
 
 
-// OpenSSL ÃÊ±âÈ­ ÇÔ¼ö
+// OpenSSL ï¿½Ê±ï¿½È­ ï¿½Ô¼ï¿½
 static void fstInitOpenSSL() {
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 }
 
-// OpenSSL Á¤¸® ÇÔ¼ö
+// OpenSSL ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
 static void fstCleanupOpenSSL() {
     ERR_free_strings();
     EVP_cleanup();
@@ -135,17 +135,18 @@ int fsec_Encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key
     int len = 0;
     int ciphertext_len = 0;
 
-    fstInitOpenSSL();
+    // ì¼ë‹¨ ì£¼ì„ì²˜ë¦¬, Manager Recví•˜ë‹¤ê°€ Abort ë°œìƒ í•¨
+//    fstInitOpenSSL();
 
     /* Create and initialise the context */
     if (!(ctx = EVP_CIPHER_CTX_new())) {
         unsigned long errCode = 0;
         char errStr[256]  = {0x00,};
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
 
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL();
         return 0;
     }
 
@@ -157,11 +158,11 @@ int fsec_Encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key
     if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
         unsigned long errCode = 0;
         char errStr[256]  = {0x00,};
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
 
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL();
         return 0;
     }
 
@@ -171,11 +172,11 @@ int fsec_Encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key
     if (1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len)) {
         unsigned long errCode = 0;
         char errStr[256]  = {0x00,};
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
 
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL(); // OpenSSL ï¿½ï¿½ï¿½ï¿½
         return 0;
     }
     ciphertext_len = len;
@@ -186,18 +187,18 @@ int fsec_Encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key
     if (1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
         unsigned long errCode = 0;
         char errStr[256]  = {0x00,};
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Encrypto Failed (%d)(%s)", errCode,errStr);
 
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL(); // OpenSSL ï¿½ï¿½ï¿½ï¿½
         return 0;
     }
     ciphertext_len += len;
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-    fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//    fstCleanupOpenSSL(); // OpenSSL ï¿½ï¿½ï¿½ï¿½
 
     return ciphertext_len;
 }
@@ -272,18 +273,19 @@ int fsec_Decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *k
 
     int len = 0;
 
-    fstInitOpenSSL();
+    // ì¼ë‹¨ ì£¼ì„ì²˜ë¦¬, Manager Recví•˜ë‹¤ê°€ Abort ë°œìƒ í•¨
+//    fstInitOpenSSL();
 
     /* Create and initialise the context */
     if (!(ctx = EVP_CIPHER_CTX_new()))
     {
         unsigned long errCode = 0;
         char errStr[256]  = {0x00,};
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Decyprto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Decyprto Failed (%d)(%s)", errCode,errStr);
 
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL();
         return 0;
     }
 
@@ -297,12 +299,12 @@ int fsec_Decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *k
         unsigned long errCode;
         char errStr[256];
 
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Decyprto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Decyprto Failed (%d)(%s)", errCode,errStr);
 
         EVP_CIPHER_CTX_free(ctx);
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL();
 
         return 0;
     }
@@ -315,12 +317,12 @@ int fsec_Decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *k
         unsigned long errCode;
         char errStr[256];
 
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Decyprto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DEBUG,"Decyprto Failed (%d)(%s)", errCode,errStr);
 
         EVP_CIPHER_CTX_free(ctx);
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL();
 
         return 0;
     }
@@ -335,12 +337,12 @@ int fsec_Decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *k
         unsigned long errCode;
         char errStr[256];
 
-        errCode = ERR_get_error(); // ¿¡·¯ ÄÚµå °¡Á®¿À±â
-        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ¿¡·¯ ¹®ÀÚ¿­ °¡Á®¿À±â
-        WRITE_CRITICAL(CATEGORY_DB,"Decyprto Failed (%d)(%s)", errCode,errStr);
+        errCode = ERR_get_error(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        ERR_error_string_n(errCode, errStr, sizeof(errStr)); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        WRITE_DEBUG(CATEGORY_DB,"Decyprto Failed (%d)(%s)", errCode,errStr);
 
         EVP_CIPHER_CTX_free(ctx);
-        fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//        fstCleanupOpenSSL();
 
         return 0;
     }
@@ -349,7 +351,7 @@ int fsec_Decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *k
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-    fstCleanupOpenSSL(); // OpenSSL Á¤¸®
+//    fstCleanupOpenSSL1();
 
     return 1;
 }

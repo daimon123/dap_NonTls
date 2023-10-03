@@ -314,6 +314,7 @@ void   fcom_StrcatSafe          (char *dest, size_t dest_size, const char *src  
 int    fcom_TokenCnt            (char *orgstr, char *mark                       );
 int    fcom_GetStringPos        (char *s, char c                                );
 int    fcom_GetRoundTagValue    (char*in, char* out                             );
+int    fcom_SafeAtoi(const char *str, int *result);
 /* ------------------------------------------------------------------- */
 
 

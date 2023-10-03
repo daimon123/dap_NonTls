@@ -306,7 +306,7 @@ void fjson_ParseJsonObjectFt(
         }
         else if( !strcmp(pkey, STR_RDP_SESSION) )
         {
-            fjson_ParseJsonRdpSession(key, &itemIdx, value, DtDa);
+            fjson_ParseJsonRdpSession(key, &itemIdx, value, DtDa, cpip);
         }
         // CPU_USAGE(39)
         if( !strcmp(key, STR_CPU_USAGE ) )
@@ -328,7 +328,7 @@ void fjson_ParseJsonObjectFt(
 //            fjson_GetSummaryFt(value, pkey, strSummary);
             if(!strcmp(pkey,STR_CPU_USAGE))
             {
-                fjson_GetSummaryCpuUsage(element, DtDa,cpip);
+                fjson_GetSummaryCpuUsage(element, DtDa, cpip);
             }
             else
             {
@@ -831,7 +831,7 @@ void fjson_GetSummaryFt(json_t *value, char *type, char *res)
     else                            strcpy(res, tmpSummary);
 
 }
-void fjson_GetSummaryCpuUsage(json_t* element, _DAP_DETECT_DATA* 	DtDa, char* cpip)
+void fjson_GetSummaryCpuUsage(json_t* element, _DAP_DETECT_DATA* DtDa, char* cpip)
 {
     int Cnt = 0;
     char StrCnt[5+1];
@@ -979,7 +979,7 @@ void fjson_GetSummaryCpuUsage(json_t* element, _DAP_DETECT_DATA* 	DtDa, char* cp
 void fjson_ParseJsonMainBoardFt(
         const char*		key,
         json_t*			value,
-        _DAP_DETECT_DATA *	DtDa,
+        _DAP_DETECT_DATA*	DtDa,
         char*			cpip)
 {
     if( !strcmp(key, STR_HB_MB_MF) )
@@ -1044,12 +1044,10 @@ void jfson_ParseJsonSystemFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_bootup_state, subValue);
             snprintf(DtDa->System.st_bootup_state, sizeof(DtDa->System.st_bootup_state), "%s", subValue );
         }
         else
         {
-//            strcpy(DtDa->System.st_bootup_state, json_string_value(value));
             snprintf(DtDa->System.st_bootup_state, sizeof(DtDa->System.st_bootup_state), "%s",  json_string_value(value));
         }
     }
@@ -1061,12 +1059,10 @@ void jfson_ParseJsonSystemFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_dns_host_name, subValue);
             snprintf( DtDa->System.st_dns_host_name, sizeof(DtDa->System.st_dns_host_name), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->System.st_dns_host_name, json_string_value(value));
             snprintf( DtDa->System.st_dns_host_name, sizeof(DtDa->System.st_dns_host_name), "%s", json_string_value(value));
         }
     }
@@ -1078,12 +1074,10 @@ void jfson_ParseJsonSystemFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_domain, subValue);
             snprintf( DtDa->System.st_domain, sizeof(DtDa->System.st_domain), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->System.st_domain, json_string_value(value));
             snprintf( DtDa->System.st_domain, sizeof(DtDa->System.st_domain), "%s", json_string_value(value));
         }
     }
@@ -1105,19 +1099,17 @@ void jfson_ParseJsonSystemFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_vga, subValue);
             snprintf( DtDa->System.st_vga, sizeof(DtDa->System.st_vga), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->System.st_vga, json_string_value(value));
             snprintf( DtDa->System.st_vga, sizeof(DtDa->System.st_vga), "%s", json_string_value(value));
         }
         //WRITE_INFO_IP( cpip, "    \"%s\" : \"%s\"\n", key,DtDa->System.st_vga);
     }
     else if( !strcmp(key, STR_ST_INSTALLED_VM) )
     {
-        memset(skey, 0x00, 30 * sizeof(char));
+        memset(skey, 0x00, 30);
         strcpy(skey, STR_ST_INSTALLED_VM);
         WRITE_INFO_IP(cpip, "----\""STR_ST_INSTALLED_VM"\"\n");
     }
@@ -1127,13 +1119,26 @@ void jfson_ParseJsonSystemFt(
         {
             fjson_LogJsonAuxFt(5, key, value, 6, cpip);
             DtDa->System.st_installed_vm_size = json_integer_value(value);
-            memset(skey, 0x00, 30 * sizeof(char));
+            memset(skey, 0x00, 30);
         }
         else
         {
             WRITE_INFO_IP(cpip, "------\"%s\" : \"%s\"\n", key,json_string_value(value));
-            int subIdx = atoi(key)-1;
-//            strcpy(DtDa->System.st_installed_vm[subIdx], json_string_value(value));
+//            int subIdx = atoi(key)-1;
+            int result = 0;
+            int subIdx = 0;
+            if (fcom_SafeAtoi(key, &result)) {
+                subIdx = result-1;
+                if ( subIdx  < 0 )
+                    subIdx = 0;
+            } else {
+                subIdx = 0;
+            }
+            if ( subIdx >= MAX_COMMON_COUNT ) {
+                WRITE_WARNING_IP(cpip,"System Detect Data Max Count Over ");
+                return;
+            }
+
             snprintf( DtDa->System.st_installed_vm[subIdx],
                       sizeof(DtDa->System.st_installed_vm[subIdx]),
                       "%s", json_string_value(value));
@@ -1145,14 +1150,12 @@ void jfson_ParseJsonSystemFt(
         if(strlen(json_string_value(value)) > 63)
         {
             char subValue[63+1];
-            memset(subValue, 0x00, 30 * sizeof(char));
+            memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_name, subValue);
             snprintf( DtDa->System.st_name, sizeof(DtDa->System.st_name), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->System.st_name, json_string_value(value));
             snprintf( DtDa->System.st_name, sizeof(DtDa->System.st_name), "%s", json_string_value(value));
         }
         //WRITE_INFO_IP( cpip, "    \"%s\" : \"%s\"\n", key,DtDa->System.st_name);
@@ -1168,14 +1171,12 @@ void jfson_ParseJsonSystemFt(
         if(strlen(json_string_value(value)) > 63)
         {
             char subValue[63+1];
-            memset(subValue, 0x00, 30 * sizeof(char));
+            memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_vm_name, subValue);
             snprintf( DtDa->System.st_vm_name, sizeof(DtDa->System.st_vm_name), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->System.st_vm_name, json_string_value(value));
             snprintf( DtDa->System.st_vm_name, sizeof(DtDa->System.st_vm_name), "%s",  json_string_value(value));
         }
     }
@@ -1190,14 +1191,12 @@ void jfson_ParseJsonSystemFt(
         if(strlen(json_string_value(value)) > 255)
         {
             char subValue[63+1];
-            memset(subValue, 0x00, 30 * sizeof(char));
+            memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->System.st_work_group, subValue);
             snprintf( DtDa->System.st_work_group, sizeof(DtDa->System.st_work_group), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->System.st_work_group, json_string_value(value));
             snprintf( DtDa->System.st_work_group, sizeof(DtDa->System.st_work_group), "%s", json_string_value(value));
         }
     }
@@ -1218,14 +1217,11 @@ void fjson_ParseJsonOperatingSystemFt(
             char subValue[15+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 15, (char*)json_string_value(value), subValue);
-
-//            strcpy(DtDa->OperatingSystem.os_architecture, subValue);
             snprintf( DtDa->OperatingSystem.os_architecture, sizeof(DtDa->OperatingSystem.os_architecture),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->OperatingSystem.os_architecture, json_string_value(value));
             snprintf( DtDa->OperatingSystem.os_architecture, sizeof(DtDa->OperatingSystem.os_architecture),
                       "%s", json_string_value(value));
         }
@@ -1243,12 +1239,10 @@ void fjson_ParseJsonOperatingSystemFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->OperatingSystem.os_name, subValue);
             snprintf( DtDa->OperatingSystem.os_name, sizeof(DtDa->OperatingSystem.os_name), "%s",  subValue);
         }
         else
         {
-//            strcpy(DtDa->OperatingSystem.os_name, json_string_value(value));
             snprintf( DtDa->OperatingSystem.os_name, sizeof(DtDa->OperatingSystem.os_name), "%s", json_string_value(value));
         }
     }
@@ -1280,12 +1274,10 @@ void fjson_ParseJsonOperatingSystemFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->OperatingSystem.os_version, subValue);
             snprintf( DtDa->OperatingSystem.os_version, sizeof(DtDa->OperatingSystem.os_version), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->OperatingSystem.os_version, json_string_value(value));
             snprintf( DtDa->OperatingSystem.os_version, sizeof(DtDa->OperatingSystem.os_version), "%s", json_string_value(value));
         }
     }
@@ -1301,8 +1293,23 @@ void fjson_ParseJsonCpuFt(
 
     if( fcom_IsNumber((char*)key) )
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP(cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"Cpu Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_CU_DESC) )
@@ -1313,12 +1320,10 @@ void fjson_ParseJsonCpuFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_desc, subValue);
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_desc, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_desc), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_desc, json_string_value(value));
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_desc, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_desc), "%s", json_string_value(value));
         }
     }
@@ -1330,12 +1335,10 @@ void fjson_ParseJsonCpuFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_mf, subValue);
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_mf, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_mf), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_mf, json_string_value(value));
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_mf, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_mf), "%s", json_string_value(value));
         }
         //WRITE_INFO_IP( cpip, "      \"%s\" : \"%s\"\n", key,DtDa->Cpu.CpuValue[*itemIdx].cu_mf);
@@ -1348,12 +1351,10 @@ void fjson_ParseJsonCpuFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_name, subValue);
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_name, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_name), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_name, json_string_value(value));
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_name, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_name), "%s", json_string_value(value));
         }
     }
@@ -1365,12 +1366,10 @@ void fjson_ParseJsonCpuFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_pid, subValue);
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_pid, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_pid), "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Cpu.CpuValue[*itemIdx].cu_pid, json_string_value(value));
             snprintf( DtDa->Cpu.CpuValue[*itemIdx].cu_pid, sizeof(DtDa->Cpu.CpuValue[*itemIdx].cu_pid), "%s", json_string_value(value));
         }
     }
@@ -1390,14 +1389,28 @@ void fjson_ParseJsonNetAdapterFt(
 {
     if( fcom_IsNumber((char *)key) )
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP(cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"NetAdapter Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_NA_ALTE_DNS) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_alte_dns, json_string_value(value));
         snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_alte_dns, sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_alte_dns),
                   "%s", json_string_value(value));
     }
@@ -1409,14 +1422,13 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw, subValue);
+
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw, json_string_value(value));
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw, sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw),
                       "%s", json_string_value(value));
         }
@@ -1429,14 +1441,12 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw_mac, subValue);
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw_mac,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw_mac),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw_mac, json_string_value(value));
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw_mac,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_default_gw_mac),
                       "%s",json_string_value(value));
@@ -1450,14 +1460,12 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_desc, subValue);
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_desc,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_desc),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_desc,(char *) json_string_value(value));
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_desc,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_desc),
                       "%s", json_string_value(value));
@@ -1471,7 +1479,6 @@ void fjson_ParseJsonNetAdapterFt(
     else if( !strcmp(key, STR_NA_IPV4) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_ipv4, (char *)json_string_value(value));
         snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_ipv4,
                   sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_ipv4),
                   "%s",  (char *)json_string_value(value));
@@ -1480,7 +1487,6 @@ void fjson_ParseJsonNetAdapterFt(
     else if( !strcmp(key, STR_NA_IPV6) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_ipv6, (char *)json_string_value(value));
         snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_ipv6,
                   sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_ipv6),
                   "%s",  (char *)json_string_value(value));
@@ -1489,7 +1495,6 @@ void fjson_ParseJsonNetAdapterFt(
     else if( !strcmp(key, STR_NA_MAC) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_mac, (char *)json_string_value(value));
         snprintf(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_mac,
                  sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_mac),
                  "%s",
@@ -1498,7 +1503,6 @@ void fjson_ParseJsonNetAdapterFt(
     else if( !strcmp(key, STR_NA_NAME) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_name, (char *)json_string_value(value));
         snprintf(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_name,
                  sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_name),
                  "%s",
@@ -1512,7 +1516,6 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_net_connection_id, subValue);
             snprintf(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_net_connection_id,
                      sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_net_connection_id),
                      "%s",
@@ -1520,7 +1523,6 @@ void fjson_ParseJsonNetAdapterFt(
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_net_connection_id, (char *)json_string_value(value));
             snprintf(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_net_connection_id,
                      sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_net_connection_id),
                      "%s",
@@ -1550,14 +1552,12 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pn, subValue);
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pn,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pn),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pn, json_string_value(value));
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pn,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pn),
                       "%s", json_string_value(value));
@@ -1571,14 +1571,12 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pnp_device_id, subValue);
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pnp_device_id,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pnp_device_id),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pnp_device_id, json_string_value(value));
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pnp_device_id,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pnp_device_id),
                       "%s", json_string_value(value));
@@ -1587,7 +1585,6 @@ void fjson_ParseJsonNetAdapterFt(
     else if( !strcmp(key, STR_NA_PREF_DNS) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pref_dns, json_string_value(value));
         snprintf(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pref_dns,
                  sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_pref_dns),
                  "%s", json_string_value(value));
@@ -1600,14 +1597,12 @@ void fjson_ParseJsonNetAdapterFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_service_name, subValue);
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_service_name,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_service_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_service_name, json_string_value(value));
             snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_service_name,
                       sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_service_name),
                       "%s", json_string_value(value));
@@ -1617,7 +1612,6 @@ void fjson_ParseJsonNetAdapterFt(
     else if( !strcmp(key, STR_NA_SUBNET) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_subnet, json_string_value(value));
         snprintf( DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_subnet,
                   sizeof(DtDa->NetAdapter.NetAdapterValue[*itemIdx].na_subnet),
                   "%s", json_string_value(value));
@@ -1644,8 +1638,23 @@ void fjson_ParseJsonWifiFt(
 {
     if( fcom_IsNumber((char *)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP(cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"Wifi Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_WF_8021X) )
@@ -1682,13 +1691,11 @@ void fjson_ParseJsonWifiFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_interface_desc, subValue);
             snprintf( DtDa->Wifi.WifiValue[*itemIdx].wf_interface_desc, sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_interface_desc),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_interface_desc, json_string_value(value));
             snprintf( DtDa->Wifi.WifiValue[*itemIdx].wf_interface_desc, sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_interface_desc),
                       "%s", json_string_value(value));
         }
@@ -1701,7 +1708,9 @@ void fjson_ParseJsonWifiFt(
     else if( !strcmp(key, STR_WF_MAC_ADDR) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-        strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_mac_addr, json_string_value(value));
+        snprintf(DtDa->Wifi.WifiValue[*itemIdx].wf_mac_addr,
+                 sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_mac_addr), "%s", json_string_value(value));
+
     }
     else if( !strcmp(key, STR_WF_PHY_NETWORK_TYPE) )
     {
@@ -1716,13 +1725,11 @@ void fjson_ParseJsonWifiFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_profile_name, subValue);
             snprintf( DtDa->Wifi.WifiValue[*itemIdx].wf_profile_name, sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_profile_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_profile_name, json_string_value(value));
             snprintf(DtDa->Wifi.WifiValue[*itemIdx].wf_profile_name, sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_profile_name),
                      "%s", json_string_value(value));
         }
@@ -1740,14 +1747,12 @@ void fjson_ParseJsonWifiFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_ssid, subValue);
             snprintf( DtDa->Wifi.WifiValue[*itemIdx].wf_ssid,
                       sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_ssid),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Wifi.WifiValue[*itemIdx].wf_ssid, json_string_value(value));
             snprintf( DtDa->Wifi.WifiValue[*itemIdx].wf_ssid,
                       sizeof(DtDa->Wifi.WifiValue[*itemIdx].wf_ssid),
                       "%s", json_string_value(value));
@@ -1769,8 +1774,23 @@ void fjson_ParseJsonBluetoothFt(
 {
     if( fcom_IsNumber((char *)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP(cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"Bluetooth Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_BT_AUTHENTICATED) )
@@ -1796,14 +1816,12 @@ void fjson_ParseJsonBluetoothFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_device, subValue);
             snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_device,
                       sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_device),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_device, json_string_value(value));
             snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_device,
                       sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_device),
                       "%s", json_string_value(value));
@@ -1817,14 +1835,12 @@ void fjson_ParseJsonBluetoothFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_instance_name, subValue);
             snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_instance_name,
                       sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_instance_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_instance_name, json_string_value(value));
             snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_instance_name,
                       sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_instance_name),
                       "%s", json_string_value(value));
@@ -1834,7 +1850,6 @@ void fjson_ParseJsonBluetoothFt(
     else if( !strcmp(key, STR_BT_MAC_ADDR) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_mac_addr, json_string_value(value));
         snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_mac_addr,
                   sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_mac_addr),
                   "%s", json_string_value(value));
@@ -1848,14 +1863,12 @@ void fjson_ParseJsonBluetoothFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_minor_device, subValue);
             snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_minor_device,
                       sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_minor_device),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_minor_device, json_string_value(value));
             snprintf( DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_minor_device,
                       sizeof(DtDa->Bluetooth.BluetoothValue[*itemIdx].bt_minor_device),
                       "%s", json_string_value(value));
@@ -1882,8 +1895,23 @@ void fjson_ParseJsonNetConnectionFt(
 {
     if( fcom_IsNumber((char *)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP(cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"NetConnection Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_NC_CONNECTION_STATE) )
@@ -1904,14 +1932,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_desc, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_desc,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_desc),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_desc, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_desc,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_desc),
                       "%s", json_string_value(value));
@@ -1926,14 +1952,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[15+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 15, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_display_type, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_display_type,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_display_type),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_display_type, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_display_type,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_display_type),
                       "%s", json_string_value(value));
@@ -1948,14 +1972,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_local_name, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_local_name,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_local_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_local_name, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_local_name,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_local_name),
                       "%s", json_string_value(value));
@@ -1969,14 +1991,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_provider_name, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_provider_name,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_provider_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_provider_name, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_provider_name,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_provider_name),
                       "%s", json_string_value(value));
@@ -1990,14 +2010,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_name, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_name,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_name, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_name,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_name),
                       "%s", json_string_value(value));
@@ -2011,14 +2029,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_path, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_path,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_path),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_path, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_path,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_remote_path),
                       "%s", json_string_value(value));
@@ -2032,14 +2048,12 @@ void fjson_ParseJsonNetConnectionFt(
             char subValue[15+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 15,(char *) json_string_value(value), subValue);
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_resource_type, subValue);
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_resource_type,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_resource_type),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_resource_type, json_string_value(value));
             snprintf( DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_resource_type,
                       sizeof(DtDa->NetConnection.NetConnectionValue[*itemIdx].nc_resource_type),
                       "%s", json_string_value(value));
@@ -2061,8 +2075,23 @@ void fjson_ParseJsonDiskFt(
 {
     if( fcom_IsNumber((char *)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"Disk Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_DK_ACCESS) )
@@ -2078,16 +2107,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_desc, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_desc,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_desc),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_desc, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_desc,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_desc),
                       "%s", json_string_value(value));
@@ -2102,7 +2127,6 @@ void fjson_ParseJsonDiskFt(
     else if( !strcmp(key, STR_DK_FILE_SYSTEM) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_file_system, json_string_value(value));
         snprintf(DtDa->Disk.DiskValue[*itemIdx].dk_file_system,
                  sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_file_system),
                  "%s",
@@ -2111,7 +2135,6 @@ void fjson_ParseJsonDiskFt(
     else if( !strcmp(key, STR_DK_INTERFACE_TYPE) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_interface_type, json_string_value(value));
         snprintf(DtDa->Disk.DiskValue[*itemIdx].dk_interface_type,
                  sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_interface_type),
                  "%s",
@@ -2125,16 +2148,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_mf, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_mf,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_mf),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_mf, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_mf,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_mf),
                       "%s", json_string_value(value));
@@ -2148,16 +2167,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_model, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_model,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_model),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_model, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_model,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_model),
                       "%s", json_string_value(value));
@@ -2171,16 +2186,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_name, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_name,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_name, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_name, sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_name),
                       "%s", json_string_value(value));
         }
@@ -2193,16 +2204,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63,(char*) json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_physical_sn, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_physical_sn,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_physical_sn),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_physical_sn, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_physical_sn,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_physical_sn),
                       "%s", json_string_value(value));
@@ -2216,16 +2223,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_volume_name, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_volume_name,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_volume_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_volume_name, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_volume_name,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_volume_name),
                       "%s", json_string_value(value));
@@ -2239,16 +2242,12 @@ void fjson_ParseJsonDiskFt(
             char subValue[15+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 15, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_volume_sn, subValue);
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_volume_sn,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_volume_sn),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Disk.DiskValue[*itemIdx].dk_volume_sn, json_string_value(value));
-
             snprintf( DtDa->Disk.DiskValue[*itemIdx].dk_volume_sn,
                       sizeof(DtDa->Disk.DiskValue[*itemIdx].dk_volume_sn),
                       "%s", json_string_value(value));
@@ -2270,8 +2269,23 @@ void fjson_ParseJsonNetDriveFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"NetDrive Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_ND_CONNECTION_TYPE) )
@@ -2292,16 +2306,12 @@ void fjson_ParseJsonNetDriveFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_drive_name, subValue);
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_drive_name,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_drive_name),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_drive_name, json_string_value(value));
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_drive_name,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_drive_name),
                      "%s", json_string_value(value));
@@ -2315,16 +2325,12 @@ void fjson_ParseJsonNetDriveFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_provider_name, subValue);
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_provider_name,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_provider_name),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_provider_name, json_string_value(value));
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_provider_name,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_provider_name),
                      "%s", json_string_value(value));
@@ -2344,16 +2350,12 @@ void fjson_ParseJsonNetDriveFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_remote_path, subValue);
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_remote_path,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_remote_path),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_remote_path, json_string_value(value));
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_remote_path,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_remote_path),
                      "%s", json_string_value(value));
@@ -2368,16 +2370,12 @@ void fjson_ParseJsonNetDriveFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_user_name, subValue);
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_user_name,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_user_name),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_user_name, json_string_value(value));
-
             snprintf(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_user_name,
                      sizeof(DtDa->NetDrive.NetDriveValue[*itemIdx].nd_user_name),
                      "%s", json_string_value(value));
@@ -2556,8 +2554,23 @@ void fjson_ParseJsonShareFolderFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"ShareFolder Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_SF_NAME) )
@@ -2568,8 +2581,6 @@ void fjson_ParseJsonShareFolderFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_name, subValue);
-
             snprintf(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_name,
                      sizeof(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_name),
                      "%s",
@@ -2577,7 +2588,6 @@ void fjson_ParseJsonShareFolderFt(
         }
         else
         {
-//            strcpy(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_name, json_string_value(value));
             snprintf(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_name,
                      sizeof(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_name),
                      "%s", json_string_value(value));
@@ -2591,7 +2601,6 @@ void fjson_ParseJsonShareFolderFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_path, subValue);
             snprintf(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_path,
                      sizeof(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_path),
                      "%s",
@@ -2599,8 +2608,6 @@ void fjson_ParseJsonShareFolderFt(
         }
         else
         {
-//            strcpy(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_path, json_string_value(value));
-
             snprintf(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_path,
                      sizeof(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_path),
                      "%s", json_string_value(value));
@@ -2614,8 +2621,6 @@ void fjson_ParseJsonShareFolderFt(
             char subValue[10+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 10, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_status, subValue);
-
             snprintf(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_status,
                      sizeof(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_status),
                      "%s",
@@ -2623,8 +2628,6 @@ void fjson_ParseJsonShareFolderFt(
         }
         else
         {
-//            strcpy(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_status, json_string_value(value));
-
             snprintf(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_status,
                      sizeof(DtDa->ShareFolder.ShareFolderValue[*itemIdx].sf_status),
                      "%s", json_string_value(value));
@@ -2651,14 +2654,30 @@ void fjson_ParseJsonInfraredDeviceFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= 5 ) {
+        WRITE_WARNING_IP(cpip,"InfraredDevice Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_ID_MF) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
     }
+
     else if( !strcmp(key, STR_ID_NAME) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
@@ -2667,16 +2686,12 @@ void fjson_ParseJsonInfraredDeviceFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_name, subValue);
-
             snprintf(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_name,
                      sizeof(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_name),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_name, json_string_value(value));
-
             snprintf(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_name,
                      sizeof(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_name),
                      "%s", json_string_value(value));
@@ -2695,16 +2710,12 @@ void fjson_ParseJsonInfraredDeviceFt(
             char subValue[10+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 10, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_status, subValue);
-
             snprintf(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_status,
                      sizeof(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_status),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_status, json_string_value(value));
-
             snprintf(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_status,
                      sizeof(DtDa->InfraredDevice.InfraredDeviceValue[*itemIdx].id_status),
                      "%s", json_string_value(value));
@@ -2733,8 +2744,23 @@ void fjson_ParseJsonProcessFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_PROCESS_COUNT ) {
+        WRITE_WARNING(CATEGORY_DEBUG,"Process Detect Data Max Process Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_PS_COMPANY_NAME) )
@@ -2745,16 +2771,12 @@ void fjson_ParseJsonProcessFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_company_name, subValue);
-
             snprintf(DtDa->Process.ProcessValue[*itemIdx].ps_company_name,
                      sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_company_name),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_company_name, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_company_name,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_company_name),
                       "%s", json_string_value(value));
@@ -2763,7 +2785,7 @@ void fjson_ParseJsonProcessFt(
     }
     else if( !strcmp(key, STR_PS_CONNECTED_SVR_ADDR) )
     {
-        memset(skey, 0x00, 30 * sizeof(char));
+        memset(skey, 0x00, 30);
         strcpy(skey, STR_PS_CONNECTED_SVR_ADDR);
         WRITE_INFO_IP( cpip, "------\""STR_PS_CONNECTED_SVR_ADDR"\"\n");
     }
@@ -2775,13 +2797,26 @@ void fjson_ParseJsonProcessFt(
         {
             fjson_LogJsonAuxFt(5, key, value, 8, cpip);
             DtDa->Process.ProcessValue[*itemIdx].ps_connected_svr_addr_size = json_integer_value(value);
-            memset(skey, 0x00, 30 * sizeof(char));
+            memset(skey, 0x00, 30);
         }
         else
         {
             WRITE_INFO_IP( cpip, "--------\"%s\" : \"%s\"\n", key,json_string_value(value));
-            int subIdx = atoi(key)-1;
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_connected_svr_addr[subIdx], json_string_value(value));
+//            int subIdx = atoi(key)-1;
+            int result = 0;
+            int subIdx = 0;
+            if (fcom_SafeAtoi(key, &result)) {
+                subIdx = result-1;
+                if ( subIdx  < 0 )
+                    subIdx = 0;
+            } else {
+                subIdx = 0;
+            }
+
+            if (subIdx >= MAX_COMMON_COUNT ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Process Detect Max Count Over ");
+                return;
+            }
 
             snprintf(DtDa->Process.ProcessValue[*itemIdx].ps_connected_svr_addr[subIdx],
                      sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_connected_svr_addr[subIdx]),
@@ -2796,16 +2831,12 @@ void fjson_ParseJsonProcessFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_copy_right, subValue);
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_copy_right,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_copy_right),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_copy_right, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_copy_right,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_copy_right),
                       "%s", json_string_value(value) );
@@ -2819,16 +2850,12 @@ void fjson_ParseJsonProcessFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_desc, subValue);
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_desc,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_desc),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_desc, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_desc,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_desc),
                       "%s", json_string_value(value));
@@ -2842,16 +2869,12 @@ void fjson_ParseJsonProcessFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_name, subValue);
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_name,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_name),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_name, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_name,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_name),
                       "%s", json_string_value(value) );
@@ -2865,16 +2888,12 @@ void fjson_ParseJsonProcessFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255,(char*) json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_path, subValue);
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_path,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_path),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_path, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_path,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_path),
                       "%s", json_string_value(value) );
@@ -2888,8 +2907,6 @@ void fjson_ParseJsonProcessFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_ver, subValue);
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_ver,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_ver),
                       "%s", subValue);
@@ -2897,8 +2914,6 @@ void fjson_ParseJsonProcessFt(
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_file_ver, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_file_ver,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_file_ver),
                       "%s", json_string_value(value) );
@@ -2912,8 +2927,6 @@ void fjson_ParseJsonProcessFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127,(char*) json_string_value(value), subValue);
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_original_file_name, subValue);
-
 
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_original_file_name,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_original_file_name),
@@ -2921,8 +2934,6 @@ void fjson_ParseJsonProcessFt(
         }
         else
         {
-//            strcpy(DtDa->Process.ProcessValue[*itemIdx].ps_original_file_name, json_string_value(value));
-
             snprintf( DtDa->Process.ProcessValue[*itemIdx].ps_original_file_name,
                       sizeof(DtDa->Process.ProcessValue[*itemIdx].ps_original_file_name),
                       "%s", json_string_value(value) );
@@ -2954,8 +2965,21 @@ void fjson_ParseJsonRouterFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"Router Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_RT_CAPTION) )
@@ -2967,16 +2991,12 @@ void fjson_ParseJsonRouterFt(
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
 
-//            strcpy(DtDa->Router.RouterValue[*itemIdx].rt_caption, subValue);
-
             snprintf(DtDa->Router.RouterValue[*itemIdx].rt_caption,
                      sizeof(DtDa->Router.RouterValue[*itemIdx].rt_caption),
                      "%s", subValue );
         }
         else
         {
-//            strcpy(DtDa->Router.RouterValue[*itemIdx].rt_caption, json_string_value(value));
-
             snprintf(DtDa->Router.RouterValue[*itemIdx].rt_caption,
                      sizeof(DtDa->Router.RouterValue[*itemIdx].rt_caption),
                      "%s", json_string_value(value) );
@@ -2990,7 +3010,6 @@ void fjson_ParseJsonRouterFt(
     else if( !strcmp(key, STR_RT_IPADDR) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->Router.RouterValue[*itemIdx].rt_ipaddr, json_string_value(value));
         snprintf(DtDa->Router.RouterValue[*itemIdx].rt_ipaddr,
                  sizeof(DtDa->Router.RouterValue[*itemIdx].rt_ipaddr),
                  "%s",
@@ -2999,7 +3018,6 @@ void fjson_ParseJsonRouterFt(
     else if( !strcmp(key, STR_RT_MAC_ADDR) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->Router.RouterValue[*itemIdx].rt_mac_addr, json_string_value(value));
         snprintf(DtDa->Router.RouterValue[*itemIdx].rt_mac_addr,
                  sizeof(DtDa->Router.RouterValue[*itemIdx].rt_mac_addr),
                  "%s",
@@ -3013,16 +3031,12 @@ void fjson_ParseJsonRouterFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->Router.RouterValue[*itemIdx].rt_web_text, subValue);
-
             snprintf(DtDa->Router.RouterValue[*itemIdx].rt_web_text,
                      sizeof(DtDa->Router.RouterValue[*itemIdx].rt_web_text),
                      "%s", subValue );
         }
         else
         {
-//            strcpy(DtDa->Router.RouterValue[*itemIdx].rt_web_text, json_string_value(value));
-
             snprintf(DtDa->Router.RouterValue[*itemIdx].rt_web_text,
                      sizeof(DtDa->Router.RouterValue[*itemIdx].rt_web_text),
                      "%s", json_string_value(value) );
@@ -3045,8 +3059,21 @@ void fjson_ParseJsonNetPrinterFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"NetPrinter Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_NP_CONNECTED) )
@@ -3067,16 +3094,12 @@ void fjson_ParseJsonNetPrinterFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_host_name, subValue);
-
             snprintf(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_host_name,
                      sizeof(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_host_name),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_host_name, json_string_value(value));
-
             snprintf(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_host_name,
                      sizeof(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_host_name),
                      "%s", json_string_value(value));
@@ -3100,7 +3123,22 @@ void fjson_ParseJsonNetPrinterFt(
         else
         {
             WRITE_INFO_IP( cpip, "--------\"%s\" : %d\n", key,json_integer_value(value));
-            int subIdx = atoi(key)-1;
+//            int subIdx = atoi(key)-1;
+            int result = 0;
+            int subIdx = 0;
+            if (fcom_SafeAtoi(key, &result)) {
+                subIdx = result-1;
+                if ( subIdx  < 0 )
+                    subIdx = 0;
+            } else {
+                subIdx = 0;
+            }
+
+            if ( subIdx >= MAX_PORT_COUNT ) {
+                WRITE_WARNING_IP(cpip,"NetPrinter Detect Data Max Count Over ");
+                return;
+            }
+
             DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_open_port[subIdx] = json_integer_value(value);
         }
     }
@@ -3122,7 +3160,22 @@ void fjson_ParseJsonNetPrinterFt(
         else
         {
             WRITE_INFO_IP( cpip, "--------\"%s\" : %d\n", key,json_integer_value(value));
-            int subIdx = atoi(key)-1;
+//            int subIdx = atoi(key)-1;
+            int result = 0;
+            int subIdx = 0;
+            if (fcom_SafeAtoi(key, &result)) {
+                subIdx = result-1;
+                if ( subIdx  < 0 )
+                    subIdx = 0;
+            } else {
+                subIdx = 0;
+            }
+
+            if ( subIdx >= MAX_PORT_COUNT ) {
+                WRITE_WARNING_IP(cpip,"NetPrinter Detect Data Max Count Over ");
+                return;
+            }
+
             DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_printer_port[subIdx] = json_integer_value(value);
         }
     }
@@ -3139,16 +3192,12 @@ void fjson_ParseJsonNetPrinterFt(
             char subValue[127+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 127, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_web_text, subValue);
-
             snprintf(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_web_text,
                      sizeof(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_web_text),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_web_text, json_string_value(value));
-
             snprintf(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_web_text,
                      sizeof(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_web_text),
                      "%s", json_string_value(value) );
@@ -3162,16 +3211,12 @@ void fjson_ParseJsonNetPrinterFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_wsd_location, subValue);
-
             snprintf(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_wsd_location,
                      sizeof(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_wsd_location),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_wsd_location, json_string_value(value));
-
             snprintf(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_wsd_location,
                      sizeof(DtDa->NetPrinter.NetPrinterValue[*itemIdx].np_wsd_location),
                      "%s", json_string_value(value) );
@@ -3198,8 +3243,21 @@ void fjson_ParseJsonConnectExtSvrFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"ConnectExt Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_CE_CONNECTED) )
@@ -3215,16 +3273,12 @@ void fjson_ParseJsonConnectExtSvrFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->ConnectExt.ConnectExtValue[*itemIdx].ce_url, subValue);
-
             snprintf(DtDa->ConnectExt.ConnectExtValue[*itemIdx].ce_url,
                      sizeof(DtDa->ConnectExt.ConnectExtValue[*itemIdx].ce_url),
                      "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->ConnectExt.ConnectExtValue[*itemIdx].ce_url, json_string_value(value));
-
             snprintf(DtDa->ConnectExt.ConnectExtValue[*itemIdx].ce_url,
                      sizeof(DtDa->ConnectExt.ConnectExtValue[*itemIdx].ce_url),
                      "%s", json_string_value(value));
@@ -3297,7 +3351,16 @@ void fjson_ParseJsonNetScanFt(
         else
         {
             WRITE_INFO_IP( cpip, "--------\"%s\" : %d\n", key,json_integer_value(value));
-            int subIdx = atoi(key)-1;
+//            int subIdx = atoi(key)-1;
+            int result = 0;
+            int subIdx = 0;
+            if (fcom_SafeAtoi(key, &result)) {
+                subIdx = result-1;
+                if ( subIdx  < 0 )
+                    subIdx = 0;
+            } else {
+                subIdx = 0;
+            }
             DtDa->NetScan.NetScanValue[*itemIdx].ns_open_port[subIdx] = json_integer_value(value);
         }
     }
@@ -3721,12 +3784,25 @@ void fjson_ParseJsonWinDrvFt(
     }
 }
 
-void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DAP_DETECT_DATA * DtDa)
+void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DAP_DETECT_DATA * DtDa,char*	cpip)
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO(CATEGORY_INFO, "----\"%d\"", *itemIdx);
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"RdpSession Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_RDP_CLIENT_IP) )
@@ -3737,7 +3813,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
             char subValue[15+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 15, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_ip, subValue);
 
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_ip,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_ip),
@@ -3745,8 +3820,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
         }
         else
         {
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_ip, json_string_value(value));
-
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_ip,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_ip),
                      "%s", json_string_value(value));
@@ -3760,7 +3833,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
             char subValue[128+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 128, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_name, subValue);
 
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_name,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_name),
@@ -3768,8 +3840,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
         }
         else
         {
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_name, json_string_value(value));
-
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_name,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_client_name),
                      "%s", json_string_value(value));
@@ -3784,7 +3854,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
             char subValue[19+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 19, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_connect_time, subValue);
 
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_connect_time,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_connect_time),
@@ -3792,8 +3861,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
         }
         else
         {
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_connect_time, json_string_value(value));
-
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_connect_time,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_connect_time),
                      "%s", json_string_value(value));
@@ -3807,7 +3874,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
             char subValue[30+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 30, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_user_id, subValue);
 
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_user_id,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_user_id),
@@ -3815,8 +3881,6 @@ void fjson_ParseJsonRdpSession(const char* key, int *itemIdx, json_t* value, _DA
         }
         else
         {
-//            strcpy(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_user_id, json_string_value(value));
-
             snprintf(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_user_id,
                      sizeof(DtDa->RdpSession.RdpSessionValue[*itemIdx].rdp_user_id),
                      "%s", json_string_value(value));
@@ -3918,11 +3982,19 @@ void fjson_ParseJsonCpuUsage(
 {
     if( fcom_IsNumber((char *)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_DEBUG_IP(cpip,"----\"%d\"\n", *itemIdx);
     }
 
-    if(*itemIdx > MAX_PROCESS_COUNT)
+    if( *itemIdx >= MAX_PROCESS_COUNT )
     {
         WRITE_DEBUG_IP(cpip,"itemIdx (%d) > MAX_PROCESS_COUNT (%d)",*itemIdx, MAX_PROCESS_COUNT);
         DtDa->CpuUsage.size = MAX_PROCESS_COUNT;
@@ -3998,7 +4070,6 @@ void fjson_ParseJsonCpuUsage(
                      sizeof(DtDa->CpuUsage.CpuUsageValue[*itemIdx].cpu_usage_duration_time),
                      "%.0lf",json_real_value(value));
         }
-
     }
 
     else if( !strcmp(key, STR_CPU_USAGE_DURATION_TIME_CONDITION) )
@@ -4037,7 +4108,6 @@ void fjson_ParseJsonCpuUsage(
         }
         else
         {
-            strcpy(DtDa->CpuUsage.CpuUsageValue[*itemIdx].cpu_usage_status_name, json_string_value(value));
             snprintf(DtDa->CpuUsage.CpuUsageValue[*itemIdx].cpu_usage_status_name,
                      sizeof(DtDa->CpuUsage.CpuUsageValue[*itemIdx].cpu_usage_status_name),
                      "%s",

@@ -182,6 +182,7 @@ void fpcif_CleanupSocket(int socketFd) {
 void* fpcif_PcifThread(void *p_conn)
 {
     int rxt = 0;
+    int ret = 0;
     int sslRet = 0;
     int nManagerLoop = 0;
     int MsgCode = 0;
@@ -208,9 +209,6 @@ void* fpcif_PcifThread(void *p_conn)
     int thrNum = 0;
     int local_socket = 0;
     int nByteAlreadyRead = 0;
-
-    SSL_CTX *local_ctx = NULL;
-    SSL *local_socket_ssl = NULL;
 
 
     /***************************************
@@ -267,7 +265,7 @@ void* fpcif_PcifThread(void *p_conn)
     ret = fsec_Decrypt(szEncHeaderbuffer, rxt, ENC_AESKEY, ENC_IV, (unsigned char*)szHeader, &decrypto_size);
     if (ret != 1)
     {
-        WRITE_CRITICAL(CATEGORY_DEBUG,"Decrypt Failed %s %d", szlocalClientIP, local_socket);
+        WRITE_CRITICAL(CATEGORY_DEBUG,"Decrypt Failed Fd: %d Ip: %s, Not Trust channel Agent", local_socket,szlocalClientIP);
         szEncBuffer = NULL;
         szDecryptBuffer = NULL;
         goto __FINISH__;
@@ -299,7 +297,7 @@ void* fpcif_PcifThread(void *p_conn)
     WRITE_INFO(CATEGORY_DEBUG,"fsock_PreAuth MsgCode : [%d] leng : [%d] type : [%s] ",  MsgCode, leng, type);
 
     szEncBuffer = NULL;
-    if(fcom_malloc((void**)&szEncBuffer, leng) != 0)
+    if(fcom_malloc((void**)&szEncBuffer, leng*2) != 0)
     {
         WRITE_CRITICAL(CATEGORY_DEBUG,"fcom_malloc szEncBuffer Failed " );
         goto __FINISH__;
@@ -333,6 +331,12 @@ void* fpcif_PcifThread(void *p_conn)
     if (!fsec_Decrypt(szEncBuffer, leng, ENC_AESKEY, ENC_IV, (unsigned char*)szDecryptBuffer, &decrypto_size))
     {
         WRITE_CRITICAL(CATEGORY_DEBUG,"Decrypt Failed ");
+        goto __FINISH__;
+    }
+
+    // 데이터사이즈 > 버퍼 사이즈
+    if ( decrypto_size > leng*2) {
+        WRITE_CRITICAL(CATEGORY_DEBUG,"Decrypt Size Is Over (%d:%d) ", decrypto_size, leng*2);
         goto __FINISH__;
     }
 
@@ -444,24 +448,6 @@ void* fpcif_PcifThread(void *p_conn)
 
 __FINISH__:
     g_stThread_arg[thrNum].threadStepStatus = 41;
-
-    if( local_socket_ssl != NULL)
-    {
-        sslFd = SSL_get_fd(local_socket_ssl);
-    }
-    g_stThread_arg[thrNum].threadStepStatus = 44;
-    if( local_socket_ssl != NULL)
-    {
-        int err = 0;
-        err = SSL_get_error(local_socket_ssl, sslRet);
-        if ( err == SSL_ERROR_ZERO_RETURN && ReturnStep > 1) {
-            SSL_shutdown(local_socket_ssl);
-        }
-        SSL_free(local_socket_ssl);
-        local_socket_ssl = NULL;
-    }
-
-    fsock_CleanupOpenssl();
 
     if( local_socket > 0)
     {
@@ -632,7 +618,7 @@ int	fpcif_AgentRecv(
         WRITE_INFO_IP(cpip,	"Receive ip(%s)pid(%d): type(%s)code(%d)leng(%d)",
                       cpip,getpid(),msgType,msgCode,msgLeng);
 
-        if(fcom_malloc((void**)&tmpJson, sizeof(char)*((msgLeng)+1)) != 0)
+        if(fcom_malloc((void**)&tmpJson, msgLeng+1) != 0)
         {
             WRITE_CRITICAL(CATEGORY_DEBUG,"fcom_malloc Failed " );
             return (-1);
@@ -1039,17 +1025,20 @@ int	fpcif_AgentRecv(
                 fjson_ParseJsonFt(jsonRoot, &Detect, &DetectData, cpip);
                 g_stThread_arg[thrNum].threadStepStatus = 30;
 
-                if ( strstr(Detect.change_item, STR_OPERATING_SYSTEM) != NULL ||
-                     strstr(Detect.change_item, STR_WIN_DRV) != NULL ||
-                     strstr(Detect.change_item, STR_NET_SCAN) != NULL) {
-                    WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Data Except [%s] ", cpip, Detect.change_item);
+                // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+                if ( strlen(Detect.change_item) > 0 ) {
+                    if ( strstr(Detect.change_item, STR_OS_ACCOUNT) != NULL ||
+                         strstr(Detect.change_item, STR_WIN_DRV) != NULL ||
+                         strstr(Detect.change_item, STR_NET_SCAN) != NULL) {
+                        WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Data Except [%s] ", cpip, Detect.change_item);
 
-                    WRITE_INFO_IP(cpip,	"[FQPUT] (%d) Succeed in send, ip(%s)code(%d)item(%s)",
-                                  prefix, cpip, msgCode, Detect.change_item);
-                    fsock_SendAck(sock, msgType, DATACODE_RTN_SUCCESS,
-                                        g_stProcPcifInfo.cfgRetryAckCount,
-                                        g_stProcPcifInfo.retryAckSleep);
-                    break;
+                        WRITE_INFO_IP(cpip,	"[FQPUT] (%d) Succeed in send, ip(%s)code(%d)item(%s)",
+                                      prefix, cpip, msgCode, Detect.change_item);
+                        fsock_SendAck(sock, msgType, DATACODE_RTN_SUCCESS,
+                                      g_stProcPcifInfo.cfgRetryAckCount,
+                                      g_stProcPcifInfo.retryAckSleep);
+                        return (-1);
+                    }
                 }
 
                 //for test
@@ -1176,13 +1165,21 @@ int	fpcif_AgentRecv(
                 memset(tmpArrTokenKey, 0x00, sizeof(tmpArrTokenKey));
                 strcpy(tmpArrTokenKey, "");
 
-                if(fcom_malloc((void**)&arrTokenKey, sizeof(char)*(strlen(Detect.change_item)+1)) != 0)
+                if ( strlen(Detect.change_item) <= 0 ) {
+                    // send ack
+                    fsock_SendAck(sock, msgType, DATACODE_RTN_SUCCESS,
+                                  g_stProcPcifInfo.cfgRetryAckCount,
+                                  g_stProcPcifInfo.retryAckSleep);
+                    return (-1);
+                }
+
+                if(fcom_malloc((void**)&arrTokenKey, strlen(Detect.change_item)+1) != 0)
                 {
                     WRITE_CRITICAL(CATEGORY_DEBUG,"fcom_malloc Failed " );
                     return (-1);
                 }
 
-                snprintf(arrTokenKey, sizeof(char) * strlen(Detect.change_item)+1,"%s", Detect.change_item);
+                snprintf(arrTokenKey, strlen(Detect.change_item)+1,"%s", Detect.change_item);
                 tokenKey = strtok_r(arrTokenKey, ",",&TempPtr);
 
                 WRITE_INFO_IP(cpip, "- TokenKey(%s)(%s)",tokenKey, arrTokenKey);
@@ -2753,6 +2750,12 @@ int fpcif_AgentRcvTask(int DetectType,
     switch(DetectType)
     {
         case MAIN_BOARD:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->MainBoard) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
+
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->MainBoard,
                        sizeof(DetectData->MainBoard) );
@@ -2769,6 +2772,12 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case SYSTEM:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->System) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
+
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->System,
                        sizeof(DetectData->System) );
@@ -2785,6 +2794,12 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case CONNECT_EXT_SVR:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->ConnectExt) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
+
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->ConnectExt,
                        sizeof(DetectData->ConnectExt) );
@@ -2801,6 +2816,12 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case OPERATING_SYSTEM:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->OperatingSystem) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
+
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->OperatingSystem,
                        sizeof(DetectData->OperatingSystem) );
@@ -2817,6 +2838,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case CPU:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->Cpu) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->Cpu,
                        sizeof(DetectData->Cpu) );
@@ -2834,6 +2860,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case NET_ADAPTER:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->NetAdapter) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->NetAdapter,
                        sizeof(DetectData->NetAdapter) );
@@ -2850,6 +2881,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case WIFI:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->Wifi) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->Wifi,
                        sizeof(DetectData->Wifi) );
@@ -2866,6 +2902,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case BLUETOOTH:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->Bluetooth) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->Bluetooth,
                        sizeof(DetectData->Bluetooth) );
@@ -2882,6 +2923,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case NET_CONNECTION:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->NetConnection) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->NetConnection,
                        sizeof(DetectData->NetConnection) );
@@ -2898,6 +2944,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case DISK:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->Disk) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->Disk,
                        sizeof(DetectData->Disk) );
@@ -2914,6 +2965,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case NET_DRIVE:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->NetDrive) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->NetDrive,
                        sizeof(DetectData->NetDrive) );
@@ -2929,24 +2985,35 @@ int fpcif_AgentRcvTask(int DetectType,
                 strcat(tmpArrTokenKey, ",net_drive");
             }
             break;
-        case OS_ACCOUNT:
-            memcpy(	(void *)&QBuf->buf[*buffLen],
-                       (void *)&DetectData->OSAccount,
-                       sizeof(DetectData->OSAccount) );
-            *buffLen += sizeof(DetectData->OSAccount);
-            WRITE_INFO_IP(cpip, "- OS_ACCOUNT: buffLen(%d)", *buffLen);
-            //print_all_os_account(&DetectData->OSAccount);
-            if(*firstItem == 1)
-            {
-                strcat(tmpArrTokenKey, "os_account");
-                *firstItem = 0;
-            }
-            else
-            {
-                strcat(tmpArrTokenKey, ",os_account");
-            }
-            break;
+            // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+//        case OS_ACCOUNT:
+//            if ( (*buffLen >= DATABUFSIZE) ||
+//                 (*buffLen + sizeof(DetectData->OSAccount) >= DATABUFSIZE) ) {
+//                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+//                return RET_SUCC;
+//            }
+//            memcpy(	(void *)&QBuf->buf[*buffLen],
+//                       (void *)&DetectData->OSAccount,
+//                       sizeof(DetectData->OSAccount) );
+//            *buffLen += sizeof(DetectData->OSAccount);
+//            WRITE_INFO_IP(cpip, "- OS_ACCOUNT: buffLen(%d)", *buffLen);
+//            //print_all_os_account(&DetectData->OSAccount);
+//            if(*firstItem == 1)
+//            {
+//                strcat(tmpArrTokenKey, "os_account");
+//                *firstItem = 0;
+//            }
+//            else
+//            {
+//                strcat(tmpArrTokenKey, ",os_account");
+//            }
+//            break;
         case SHARE_FOLDER:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->ShareFolder) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->ShareFolder,
                        sizeof(DetectData->ShareFolder) );
@@ -2963,6 +3030,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case INFRARED_DEVICE:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->InfraredDevice) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->InfraredDevice,
                        sizeof(DetectData->InfraredDevice) );
@@ -2979,6 +3051,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case PROCESS:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->Process) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->Process,
                        sizeof(DetectData->Process) );
@@ -2995,6 +3072,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case ROUTER:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->Router) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->Router,
                        sizeof(DetectData->Router) );
@@ -3011,6 +3093,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case NET_PRINTER:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->NetPrinter) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->NetPrinter,
                        sizeof(DetectData->NetPrinter) );
@@ -3026,24 +3113,35 @@ int fpcif_AgentRcvTask(int DetectType,
                 strcat(tmpArrTokenKey, ",net_printer");
             }
             break;
-        case NET_SCAN:
-            memcpy(	(void *)&QBuf->buf[*buffLen],
-                       (void *)&DetectData->NetScan,
-                       sizeof(DetectData->NetScan) );
-            *buffLen += sizeof(DetectData->NetScan);
-            WRITE_INFO_IP(cpip, "- NET_SCAN: buffLen(%d)", *buffLen);
-            if(*firstItem == 1)
-            {
-                strcat(tmpArrTokenKey, "net_scan");
-                *firstItem = 0;
-            }
-            else
-            {
-                strcat(tmpArrTokenKey, ",net_scan");
-            }
-            break;
+            // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+//        case NET_SCAN:
+//            if ( (*buffLen >= DATABUFSIZE) ||
+//                 (*buffLen + sizeof(DetectData->NetScan) >= DATABUFSIZE) ) {
+//                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+//                return RET_SUCC;
+//            }
+//            memcpy(	(void *)&QBuf->buf[*buffLen],
+//                       (void *)&DetectData->NetScan,
+//                       sizeof(DetectData->NetScan) );
+//            *buffLen += sizeof(DetectData->NetScan);
+//            WRITE_INFO_IP(cpip, "- NET_SCAN: buffLen(%d)", *buffLen);
+//            if(*firstItem == 1)
+//            {
+//                strcat(tmpArrTokenKey, "net_scan");
+//                *firstItem = 0;
+//            }
+//            else
+//            {
+//                strcat(tmpArrTokenKey, ",net_scan");
+//            }
+//            break;
 
         case SSO_CERT: //알람정보로 DB에 기록하지 않고 이벤트만 발생
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->SsoCert) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->SsoCert,
                        sizeof(DetectData->SsoCert) );
@@ -3059,23 +3157,34 @@ int fpcif_AgentRcvTask(int DetectType,
                 strcat(tmpArrTokenKey, ",sso_cert");
             }
             break;
-        case WIN_DRV: //수집정보로 DB에만 기록함
-            memcpy(	(void *)&QBuf->buf[*buffLen],
-                       (void *)&DetectData->WinDrv,
-                       sizeof(DetectData->WinDrv) );
-            *buffLen += sizeof(DetectData->WinDrv);
-            WRITE_INFO_IP(cpip, "- WIN_DRV: buffLen(%d)", buffLen);
-            if(*firstItem == 1)
-            {
-                strcat(tmpArrTokenKey, "win_drv");
-                *firstItem = 0;
-            }
-            else
-            {
-                strcat(tmpArrTokenKey, ",win_drv");
-            }
-            break;
+            // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+//        case WIN_DRV: //수집정보로 DB에만 기록함
+//            if ( (*buffLen >= DATABUFSIZE) ||
+//                 (*buffLen + sizeof(DetectData->WinDrv) >= DATABUFSIZE) ) {
+//                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+//                return RET_SUCC;
+//            }
+//            memcpy(	(void *)&QBuf->buf[*buffLen],
+//                       (void *)&DetectData->WinDrv,
+//                       sizeof(DetectData->WinDrv) );
+//            *buffLen += sizeof(DetectData->WinDrv);
+//            WRITE_INFO_IP(cpip, "- WIN_DRV: buffLen(%d)", buffLen);
+//            if(*firstItem == 1)
+//            {
+//                strcat(tmpArrTokenKey, "win_drv");
+//                *firstItem = 0;
+//            }
+//            else
+//            {
+//                strcat(tmpArrTokenKey, ",win_drv");
+//            }
+//            break;
         case RDP_SESSION:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->RdpSession) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->RdpSession,
                        sizeof(DetectData->RdpSession) );
@@ -3092,6 +3201,11 @@ int fpcif_AgentRcvTask(int DetectType,
             }
             break;
         case CPU_USAGE:
+            if ( (*buffLen >= DATABUFSIZE) ||
+                 (*buffLen + sizeof(DetectData->CpuUsage) >= DATABUFSIZE) ) {
+                WRITE_WARNING(CATEGORY_DEBUG,"Detect Data Buffer %d Over %d", *buffLen, DATABUFSIZE );
+                return RET_SUCC;
+            }
             memcpy(	(void *)&QBuf->buf[*buffLen],
                        (void *)&DetectData->CpuUsage,
                        sizeof(DetectData->CpuUsage) );
