@@ -171,19 +171,16 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonNetDriveFt(key, &itemIdx, value, DtDa, cpip);
         }
-        // 2023.02.11 기업은행 디버깅을 위해 주석처리
-        // OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
         // OS_ACCOUNT(11)
-//        if( !strcmp(key, STR_OS_ACCOUNT) )
-//        {
-//            strcpy(pkey, STR_OS_ACCOUNT);
-//            WRITE_INFO_IP( cpip, "--\""STR_OS_ACCOUNT"\"\n");
-//        }
-//        else if( !strcmp(pkey, STR_OS_ACCOUNT) )
-//        {
-//            fjson_ParseJsonOsAccountFt(key, &itemIdx, value, DtDa, cpip);
-//        }
-
+        if( !strcmp(key, STR_OS_ACCOUNT) )
+        {
+            strcpy(pkey, STR_OS_ACCOUNT);
+            WRITE_INFO_IP( cpip, "--\""STR_OS_ACCOUNT"\"\n");
+        }
+        else if( !strcmp(pkey, STR_OS_ACCOUNT) )
+        {
+            fjson_ParseJsonOsAccountFt(key, &itemIdx, value, DtDa, cpip);
+        }
         // SHARE_FOLDER(12)
         if( !strcmp(key, STR_SHARE_FOLDER) )
         {
@@ -235,18 +232,15 @@ void fjson_ParseJsonObjectFt(
             fjson_ParseJsonNetPrinterFt(key, skey, &itemIdx, value, DtDa, cpip);
         }
         // NET_SCAN(17)
-        // 2023.02.11 기업은행 디버깅을 위해 주석처리
-        // OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
-//        if( !strcmp(key, STR_NET_SCAN) )
-//        {
-//            strcpy(pkey, STR_NET_SCAN);
-//            WRITE_INFO_IP( cpip, "--\""STR_NET_SCAN"\"\n");
-//        }
-//        else if( !strcmp(pkey, STR_NET_SCAN) )
-//        {
-//            fjson_ParseJsonNetScanFt(key, skey, &itemIdx, value, DtDa, cpip);
-//        }
-
+        if( !strcmp(key, STR_NET_SCAN) )
+        {
+            strcpy(pkey, STR_NET_SCAN);
+            WRITE_INFO_IP( cpip, "--\""STR_NET_SCAN"\"\n");
+        }
+        else if( !strcmp(pkey, STR_NET_SCAN) )
+        {
+            fjson_ParseJsonNetScanFt(key, skey, &itemIdx, value, DtDa, cpip);
+        }
         // ARP(18)
         // VIRTUAL_MACHINE(19)
         // CONNECT_EXT_SVR(20)
@@ -284,20 +278,16 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonSsoCertFt(key, value, DtDa, cpip);
         }
-
-        // 2023.02.11 기업은행 디버깅을 위해 주석처리
-        // OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
         // WIN_DRV(36)
-//        if( !strcmp(key, STR_WIN_DRV) )
-//        {
-//            strcpy(pkey, STR_WIN_DRV);
-//            WRITE_INFO_IP( cpip, "--\""STR_WIN_DRV"\"\n");
-//        }
-//        else if( !strcmp(pkey, STR_WIN_DRV) )
-//        {
-//            fjson_ParseJsonWinDrvFt(key, &itemIdx, value, DtDa, cpip);
-//        }
-
+        if( !strcmp(key, STR_WIN_DRV) )
+        {
+            strcpy(pkey, STR_WIN_DRV);
+            WRITE_INFO_IP( cpip, "--\""STR_WIN_DRV"\"\n");
+        }
+        else if( !strcmp(pkey, STR_WIN_DRV) )
+        {
+            fjson_ParseJsonWinDrvFt(key, &itemIdx, value, DtDa, cpip);
+        }
         // RDP_SESSION(38)
         if( !strcmp(key, STR_RDP_SESSION) )
         {
@@ -329,6 +319,12 @@ void fjson_ParseJsonObjectFt(
             if(!strcmp(pkey,STR_CPU_USAGE))
             {
                 fjson_GetSummaryCpuUsage(element, DtDa, cpip);
+            }
+            else if( strcmp(pkey, STR_OS_ACCOUNT) == 0 ||
+                     strcmp(pkey, STR_WIN_DRV)    == 0 ||
+                     strcmp(pkey, STR_NET_SCAN)   == 0  )
+            {
+                WRITE_DEBUG(CATEGORY_DEBUG,"Os Account / WinDrv / NetScan Summary Data Except");
             }
             else
             {
@@ -390,17 +386,13 @@ void fjson_ParseJsonObjectFt(
                          sizeof(DtDa->NetDrive.nd_summary),
                          "%s", strSummary);
             }
+            else if( !strcmp(pkey, STR_OS_ACCOUNT) )
+            {
+                snprintf(DtDa->OSAccount.oa_summary,
+                         sizeof(DtDa->OSAccount.oa_summary),
+                         "%s", strSummary);
 
-            // 2023.02.11 기업은행 디버깅을 위해 주석처리
-            // OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
-//            else if( !strcmp(pkey, STR_OS_ACCOUNT) )
-//            {
-//                snprintf(DtDa->OSAccount.oa_summary,
-//                         sizeof(DtDa->OSAccount.oa_summary),
-//                         "%s", strSummary);
-//
-//            }
-
+            }
             else if( !strcmp(pkey, STR_SHARE_FOLDER) )
             {
                 snprintf(DtDa->ShareFolder.sf_summary,
@@ -2397,8 +2389,21 @@ void fjson_ParseJsonOsAccountFt(
 {
     if( fcom_IsNumber((char *)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }
+
+    if ( *itemIdx >= MAX_COMMON_COUNT ) {
+        WRITE_WARNING_IP(cpip,"OSAccount Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_OA_CAPTION) )
@@ -2409,16 +2414,12 @@ void fjson_ParseJsonOsAccountFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char *)json_string_value(value), subValue);
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_caption, subValue);
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_caption,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_caption),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_caption, json_string_value(value));
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_caption,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_caption),
                       "%s", json_string_value(value));
@@ -2432,7 +2433,6 @@ void fjson_ParseJsonOsAccountFt(
             char subValue[255+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 255,(char *)json_string_value(value), subValue);
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_desc, subValue);
 
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_desc,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_desc),
@@ -2440,8 +2440,6 @@ void fjson_ParseJsonOsAccountFt(
         }
         else
         {
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_desc, json_string_value(value));
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_desc,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_desc),
                       "%s", json_string_value(value));
@@ -2466,7 +2464,6 @@ void fjson_ParseJsonOsAccountFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_name, subValue);
 
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_name,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_name),
@@ -2474,8 +2471,6 @@ void fjson_ParseJsonOsAccountFt(
         }
         else
         {
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_name, json_string_value(value));
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_name,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_name),
                       "%s", json_string_value(value));
@@ -2489,7 +2484,6 @@ void fjson_ParseJsonOsAccountFt(
             char subValue[63+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 63, (char*)json_string_value(value), subValue);
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_sid, subValue);
 
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_sid,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_sid),
@@ -2497,8 +2491,6 @@ void fjson_ParseJsonOsAccountFt(
         }
         else
         {
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_sid, json_string_value(value));
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_sid,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_sid),
                       "%s", json_string_value(value));
@@ -2517,16 +2509,12 @@ void fjson_ParseJsonOsAccountFt(
             char subValue[31+1];
             memset(subValue, 0x00, sizeof(subValue));
             fcom_SubStr(1, 31,(char*) json_string_value(value), subValue);
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_status, subValue);
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_status,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_status),
                       "%s", subValue);
         }
         else
         {
-//            strcpy(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_status, json_string_value(value));
-
             snprintf( DtDa->OSAccount.OSAccountValue[*itemIdx].oa_status,
                       sizeof(DtDa->OSAccount.OSAccountValue[*itemIdx].oa_status),
                       "%s", json_string_value(value));
@@ -2975,6 +2963,8 @@ void fjson_ParseJsonRouterFt(
             *itemIdx = 0;
         }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }else {
+        return;
     }
 
     if ( *itemIdx >= MAX_COMMON_COUNT ) {
@@ -3069,6 +3059,8 @@ void fjson_ParseJsonNetPrinterFt(
             *itemIdx = 0;
         }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }else {
+        return;
     }
 
     if ( *itemIdx >= MAX_COMMON_COUNT ) {
@@ -3253,6 +3245,8 @@ void fjson_ParseJsonConnectExtSvrFt(
             *itemIdx = 0;
         }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
     }
 
     if ( *itemIdx >= MAX_COMMON_COUNT ) {
@@ -3301,8 +3295,23 @@ void fjson_ParseJsonNetScanFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    }else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_NETSCAN_COUNT ) {
+        WRITE_WARNING_IP(cpip,"NetScan Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_NS_DAP_AGENT) )
@@ -3313,7 +3322,6 @@ void fjson_ParseJsonNetScanFt(
     else if( !strcmp(key, STR_NS_IP) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetScan.NetScanValue[*itemIdx].ns_ip, json_string_value(value));
         snprintf(DtDa->NetScan.NetScanValue[*itemIdx].ns_ip,
                  sizeof(DtDa->NetScan.NetScanValue[*itemIdx].ns_ip),
                  "%s",
@@ -3322,7 +3330,6 @@ void fjson_ParseJsonNetScanFt(
     else if( !strcmp(key, STR_NS_MAC) )
     {
         fjson_LogJsonAuxFt(5, key, value, 6, cpip);
-//        strcpy(DtDa->NetScan.NetScanValue[*itemIdx].ns_mac, json_string_value(value));
         snprintf(DtDa->NetScan.NetScanValue[*itemIdx].ns_mac,
                  sizeof(DtDa->NetScan.NetScanValue[*itemIdx].ns_mac),
                  "%s",
@@ -3335,7 +3342,7 @@ void fjson_ParseJsonNetScanFt(
     }
     else if( !strcmp(key, STR_NS_OPEN_PORT) )
     {
-        memset(skey, 0x00, 30 * sizeof(char));
+        memset(skey, 0x00, 30 );
         strcpy(skey, STR_NS_OPEN_PORT);
         WRITE_INFO_IP( cpip, "------\""STR_NS_OPEN_PORT"\"\n");
     }
@@ -3346,7 +3353,7 @@ void fjson_ParseJsonNetScanFt(
         {
             fjson_LogJsonAuxFt(5, key, value, 8, cpip);
             DtDa->NetScan.NetScanValue[*itemIdx].ns_open_port_size = json_integer_value(value);
-            memset(skey, 0x00, 30 * sizeof(char));
+            memset(skey, 0x00, 30);
         }
         else
         {
@@ -3360,6 +3367,10 @@ void fjson_ParseJsonNetScanFt(
                     subIdx = 0;
             } else {
                 subIdx = 0;
+            }
+            if ( subIdx >= MAX_NS_OPEN_PORT_COUNT) {
+                WRITE_WARNING_IP(cpip,"NetScan Detect Data Max Count Over ");
+                return;
             }
             DtDa->NetScan.NetScanValue[*itemIdx].ns_open_port[subIdx] = json_integer_value(value);
         }
@@ -3398,8 +3409,23 @@ void fjson_ParseJsonWinDrvFt(
 {
     if( fcom_IsNumber((char*)key) && json_is_object(value))
     {
-        *itemIdx = atoi(key)-1;
+//        *itemIdx = atoi(key)-1;
+        int result = 0;
+        if (fcom_SafeAtoi(key, &result)) {
+            *itemIdx = result-1;
+            if ( *itemIdx  < 0 )
+                *itemIdx = 0;
+        } else {
+            *itemIdx = 0;
+        }
         WRITE_INFO_IP( cpip, "----\"%d\"\n", *itemIdx);
+    } else {
+        return;
+    }
+
+    if ( *itemIdx >= MAX_WINDRV_COUNT ) {
+        WRITE_WARNING_IP(cpip,"WinDrv Detect Data Max Count Over ");
+        return;
     }
 
     if( !strcmp(key, STR_DV_CLASS) )
