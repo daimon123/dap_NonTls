@@ -1027,17 +1027,21 @@ int	fpcif_AgentRecv(
 
                 // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
                 if ( strlen(Detect.change_item) > 0 ) {
-                    if ( strstr(Detect.change_item, STR_OS_ACCOUNT) != NULL ||
-                         strstr(Detect.change_item, STR_WIN_DRV) != NULL ||
-                         strstr(Detect.change_item, STR_NET_SCAN) != NULL) {
-                        WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Data Except [%s] ", cpip, Detect.change_item);
-
-                        WRITE_INFO_IP(cpip,	"[FQPUT] (%d) Succeed in send, ip(%s)code(%d)item(%s)",
-                                      prefix, cpip, msgCode, Detect.change_item);
-                        fsock_SendAck(sock, msgType, DATACODE_RTN_SUCCESS,
-                                      g_stProcPcifInfo.cfgRetryAckCount,
-                                      g_stProcPcifInfo.retryAckSleep);
-                        return (-1);
+                    int i = 0;
+                    int numRows = sizeof(g_stProcPcifInfo.szExceptData) / sizeof(g_stProcPcifInfo.szExceptData[0]);
+                    for ( i = 0; i < numRows; i++){
+                        if (strlen(g_stProcPcifInfo.szExceptData[i]) > 0 ) {
+                            // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+                            if ( strstr(Detect.change_item, g_stProcPcifInfo.szExceptData[i]) != NULL ) {
+                                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Data Excepted [%s] ", cpip, Detect.change_item);
+                                WRITE_INFO_IP(cpip,	"[FQPUT] (%d) Succeed in send, ip(%s)code(%d)item(%s)",
+                                              prefix, cpip, msgCode, Detect.change_item);
+                                fsock_SendAck(sock, msgType, DATACODE_RTN_SUCCESS,
+                                              g_stProcPcifInfo.cfgRetryAckCount,
+                                              g_stProcPcifInfo.retryAckSleep);
+                                return (-1);
+                            }
+                        }
                     }
                 }
 

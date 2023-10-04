@@ -15,6 +15,7 @@
 #include "json/dap_defstr.h"
 #include "com/dap_req.h"
 #include "com/dap_com.h"
+#include "pcif.h"
 
 
 void fjson_ParseJsonString(json_t *element)
@@ -25,6 +26,21 @@ void fjson_ParseJsonString(json_t *element)
 void fjson_ParseJsonInteger(json_t *element)
 {
     json_integer_value(element);
+}
+
+static int fjson_ExceptCheck(const char* key) {
+    int i = 0;
+    int numRows = sizeof(g_stProcPcifInfo.szExceptData) / sizeof(g_stProcPcifInfo.szExceptData[0]);
+    for ( i = 0; i < numRows; i++){
+        if (strlen(g_stProcPcifInfo.szExceptData[i]) > 0 ) {
+            // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+            if ( strcmp(key, g_stProcPcifInfo.szExceptData[i]) == 0 ) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
 }
 void fjson_ParseJsonObjectFt(
         json_t*			element,
@@ -61,6 +77,21 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_LogJsonAuxFt(5, key, value, 0, cpip);
             snprintf( Dt->change_item, sizeof(Dt->change_item), "%s", json_string_value(value));
+            if ( strlen(Dt->change_item) > 0 ) {
+                int i = 0;
+                int numRows = sizeof(g_stProcPcifInfo.szExceptData) / sizeof(g_stProcPcifInfo.szExceptData[0]);
+                for ( i = 0; i < numRows; i++){
+                    if (strlen(g_stProcPcifInfo.szExceptData[i]) > 0 ) {
+                        // 기업은행 OS_ACCOUNT, NET_SCAN, WIN_DRV 데이터 수신 Drop 처리
+                        if ( strstr(Dt->change_item, g_stProcPcifInfo.szExceptData[i]) != NULL ) {
+                            WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, Dt->change_item);
+                            return;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
         else if( !strcmp(key, STR_DETECT_TIME) )
         {
@@ -74,6 +105,10 @@ void fjson_ParseJsonObjectFt(
         // MAIN_BOARD(1)
         if( !strcmp(key, STR_MAIN_BOARD) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_MAIN_BOARD);
             WRITE_INFO_IP( cpip, "--\""STR_MAIN_BOARD"\"\n");
         }
@@ -81,9 +116,14 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonMainBoardFt(key, value, DtDa, cpip);
         }
+
         // SYSTEM(2)
         if( !strcmp(key, STR_SYSTEM) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_SYSTEM);
             WRITE_INFO_IP( cpip, "--\""STR_SYSTEM"\"\n");
         }
@@ -91,9 +131,14 @@ void fjson_ParseJsonObjectFt(
         {
             jfson_ParseJsonSystemFt(key, skey, value, DtDa, cpip);
         }
+
         // OPERATING_SYSTEM(3)
         if( !strcmp(key, STR_OPERATING_SYSTEM) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_OPERATING_SYSTEM);
             WRITE_INFO_IP( cpip, "--\""STR_OPERATING_SYSTEM"\"\n");
         }
@@ -101,9 +146,14 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonOperatingSystemFt(key, value, DtDa, cpip);
         }
+
         // CPU(4)
         if( !strcmp(key, STR_CPU) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_CPU);
             WRITE_INFO_IP( cpip, "--\""STR_CPU"\"\n");
         }
@@ -111,9 +161,14 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonCpuFt(key, &itemIdx, value, DtDa, cpip);
         }
+
         // NET_ADAPTER(5)
         if( !strcmp(key, STR_NET_ADAPTER) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_NET_ADAPTER);
             WRITE_INFO_IP( cpip, "--\""STR_NET_ADAPTER"\"\n");
         }
@@ -121,9 +176,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonNetAdapterFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // WIFI(6)
         if( !strcmp(key, STR_WIFI) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_WIFI);
             WRITE_INFO_IP( cpip, "--\""STR_WIFI"\"\n");
         }
@@ -131,9 +192,14 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonWifiFt(key, &itemIdx, value, DtDa, cpip);
         }
+
         // BLUETOOTH(7)
         if( !strcmp(key, STR_BLUETOOTH) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_BLUETOOTH);
             WRITE_INFO_IP( cpip, "--\""STR_BLUETOOTH"\"\n");
         }
@@ -141,9 +207,14 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonBluetoothFt(key, &itemIdx, value, DtDa, cpip);
         }
+
         // NET_CONNECTION(8)
         if( !strcmp(key, STR_NET_CONNECTION) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_NET_CONNECTION);
             WRITE_INFO_IP( cpip, "--\""STR_NET_CONNECTION"\"\n");
         }
@@ -151,9 +222,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonNetConnectionFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // DISK(9)
         if( !strcmp(key, STR_DISK) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_DISK);
             WRITE_INFO_IP( cpip, "--\""STR_DISK"\"\n");
         }
@@ -161,9 +238,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonDiskFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // NET_DRIVE(10)
         if( !strcmp(key, STR_NET_DRIVE) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_NET_DRIVE);
             WRITE_INFO_IP( cpip, "--\""STR_NET_DRIVE"\"\n");
         }
@@ -171,9 +254,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonNetDriveFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // OS_ACCOUNT(11)
         if( !strcmp(key, STR_OS_ACCOUNT) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_OS_ACCOUNT);
             WRITE_INFO_IP( cpip, "--\""STR_OS_ACCOUNT"\"\n");
         }
@@ -181,9 +270,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonOsAccountFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // SHARE_FOLDER(12)
         if( !strcmp(key, STR_SHARE_FOLDER) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_SHARE_FOLDER);
             WRITE_INFO_IP( cpip, "--\""STR_SHARE_FOLDER"\"\n");
         }
@@ -191,9 +286,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonShareFolderFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // INFRARED_DEVICE(13)
         if( !strcmp(key, STR_INFRARED_DEVICE) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_INFRARED_DEVICE);
             WRITE_INFO_IP( cpip, "--\""STR_INFRARED_DEVICE"\"\n");
         }
@@ -201,9 +302,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonInfraredDeviceFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // PROCESS(14)
         if( !strcmp(key, STR_PROCESS) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_PROCESS);
             WRITE_INFO_IP( cpip, "--\""STR_PROCESS"\"\n");
         }
@@ -211,9 +318,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonProcessFt(key, skey, &itemIdx, value, DtDa, cpip);
         }
+
+
         // ROUTER(15)
         if( !strcmp(key, STR_ROUTER) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_ROUTER);
             WRITE_INFO_IP( cpip, "--\""STR_ROUTER"\"\n");
         }
@@ -221,9 +334,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonRouterFt(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // NET_PRINTER(16)
         if( !strcmp(key, STR_NET_PRINTER) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_NET_PRINTER);
             WRITE_INFO_IP( cpip, "--\""STR_NET_PRINTER"\"\n");
         }
@@ -231,9 +350,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonNetPrinterFt(key, skey, &itemIdx, value, DtDa, cpip);
         }
+
+
         // NET_SCAN(17)
         if( !strcmp(key, STR_NET_SCAN) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_NET_SCAN);
             WRITE_INFO_IP( cpip, "--\""STR_NET_SCAN"\"\n");
         }
@@ -241,11 +366,17 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonNetScanFt(key, skey, &itemIdx, value, DtDa, cpip);
         }
+
+
         // ARP(18)
         // VIRTUAL_MACHINE(19)
         // CONNECT_EXT_SVR(20)
         if( !strcmp(key, STR_CONNECT_EXT_SVR) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_CONNECT_EXT_SVR);
             WRITE_INFO_IP( cpip, "--\""STR_CONNECT_EXT_SVR"\"\n");
         }
@@ -271,6 +402,10 @@ void fjson_ParseJsonObjectFt(
         // WIN_DRV(36)
         if( !strcmp(key, STR_SSO_CERT) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_SSO_CERT);
             WRITE_INFO_IP( cpip, "--\""STR_SSO_CERT"\"\n");
         }
@@ -278,9 +413,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonSsoCertFt(key, value, DtDa, cpip);
         }
+
+
         // WIN_DRV(36)
         if( !strcmp(key, STR_WIN_DRV) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_WIN_DRV);
             WRITE_INFO_IP( cpip, "--\""STR_WIN_DRV"\"\n");
         }
@@ -288,9 +429,14 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonWinDrvFt(key, &itemIdx, value, DtDa, cpip);
         }
+
         // RDP_SESSION(38)
         if( !strcmp(key, STR_RDP_SESSION) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_RDP_SESSION);
             WRITE_INFO(CATEGORY_INFO,"--\""STR_RDP_SESSION"\"\n");
         }
@@ -298,9 +444,15 @@ void fjson_ParseJsonObjectFt(
         {
             fjson_ParseJsonRdpSession(key, &itemIdx, value, DtDa, cpip);
         }
+
+
         // CPU_USAGE(39)
         if( !strcmp(key, STR_CPU_USAGE ) )
         {
+//            if ( fjson_ExceptCheck(key) > 0 ){
+//                WRITE_DEBUG(CATEGORY_DEBUG,"[%s] Config JSON Parse Data Excepted [%s] ", cpip, key);
+//                return;
+//            }
             strcpy(pkey, STR_CPU_USAGE);
             WRITE_INFO_IP(cpip,"--\""STR_CPU_USAGE"\"\n");
         }
@@ -315,7 +467,6 @@ void fjson_ParseJsonObjectFt(
             memset(strSummary, 0x00, sizeof(strSummary));
 
             WRITE_INFO_IP( cpip, "----\""STR_SUMMARY"\"\n");
-//            fjson_GetSummaryFt(value, pkey, strSummary);
             if(!strcmp(pkey,STR_CPU_USAGE))
             {
                 fjson_GetSummaryCpuUsage(element, DtDa, cpip);

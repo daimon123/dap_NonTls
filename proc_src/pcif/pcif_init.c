@@ -336,6 +336,22 @@ int fpcif_PcifInit(void)
     snprintf(g_stServerInfo.stDapComnInfo.szUpdateConfigPath, sizeof(g_stServerInfo.stDapComnInfo.szUpdateConfigPath), "%s", szPath);
 
 
+    char szDataExcept[512] = {0x00,};
+    fcom_GetProfile("PCIF"  ,"EXCEPT_DETECT_ITEM", szDataExcept ,"");
+    if ( strlen(szDataExcept) >= 0 ) {
+        int idx = 0;
+        char *token = NULL;
+        // 문자열을 첫 번째 구분자로 나눕니다.
+        token = strtok(szDataExcept, "|");
+        snprintf(g_stProcPcifInfo.szExceptData[idx++], sizeof(g_stProcPcifInfo.szExceptData[idx++]), "%s", token);
+        while (token != NULL) {
+            // 다음 토큰을 찾습니다.
+            token = strtok(NULL, "|");
+            if ( token != NULL ) {
+                snprintf(g_stProcPcifInfo.szExceptData[idx++], sizeof(g_stProcPcifInfo.szExceptData[idx++]), "%s", token);
+            }
+        }
+    }
 
     printf("Succeed in init, pid(%d) |%s\n", getpid(),__func__);
 

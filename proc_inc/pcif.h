@@ -315,6 +315,8 @@ typedef struct
     char keyFullPath[286+1];
     char cfgThreadHangCheck[1 +1];
 
+
+    char szExceptData[30][64];
     /** File 처리 변수 **/
 
     char szDtFilePath[256 +1];
